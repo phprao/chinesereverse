@@ -21,7 +21,7 @@ func init() {
 		datat2s: make(map[rune]rune),
 	}
 
-	if err := buildDict(defaultDictName); err != nil {
+	if err := withDefaultDictFile(); err != nil {
 		log.Println(err)
 	}
 }
@@ -32,14 +32,19 @@ func WithExtraDictFile(filepath string) error {
 	return err
 }
 
-func buildDict(dictname string) error {
+func withDefaultDictFile() error {
 	_, filename, _, _ := runtime.Caller(1)
-	// log.Println(filename)
-	dictfile := path.Dir(filename) + dictname
+	dictfile := path.Dir(filename) + defaultDictName
+
+	return buildDict(dictfile)
+}
+
+func buildDict(dictfile string) error {
 	file, err := os.Open(dictfile)
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 	buf := bufio.NewScanner(file)
 	var i int
 	var simplified []rune
