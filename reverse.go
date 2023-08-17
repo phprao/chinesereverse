@@ -2,6 +2,7 @@ package chinesereverse
 
 import (
 	"bufio"
+	"errors"
 	"log"
 	"os"
 	"path"
@@ -12,7 +13,7 @@ import (
 var dt *dict
 
 // 简体 <=> 繁体对照表，格式为一行简体接一行繁体，可以有多行
-var dictname = "/dict.txt"
+var defaultDictName = "/dict.txt"
 
 func init() {
 	dt = &dict{
@@ -20,17 +21,24 @@ func init() {
 		datat2s: make(map[rune]rune),
 	}
 
-	buildDict()
+	if err := buildDict(defaultDictName); err != nil {
+		log.Println(err)
+	}
 }
 
-func buildDict() {
+// 在现在对照表的基础上追加自定的对照表，如果有相同的字，那么会在相应位置上覆盖掉原来的。
+func WithExtraDictFile(filepath string) error {
+	err := buildDict(filepath)
+	return err
+}
+
+func buildDict(dictname string) error {
 	_, filename, _, _ := runtime.Caller(1)
 	// log.Println(filename)
 	dictfile := path.Dir(filename) + dictname
 	file, err := os.Open(dictfile)
 	if err != nil {
-		log.Println(err)
-		return
+		return err
 	}
 	buf := bufio.NewScanner(file)
 	var i int
@@ -49,13 +57,16 @@ func buildDict() {
 		}
 		i++
 	}
+
 	if len(simplified) != len(traditional) {
-		log.Println("simplified length is not equal to traditional")
-		return
+		return errors.New("simplified length is not equal to traditional")
 	}
+
 	for i := 0; i < len(simplified); i++ {
 		dt.set(simplified[i], traditional[i])
 	}
+
+	return nil
 }
 
 // 简体 => 繁体
