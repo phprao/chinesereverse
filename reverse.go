@@ -11,6 +11,7 @@ import (
 )
 
 var dt *dict
+var once sync.Once
 
 // 简体 <=> 繁体对照表，格式为一行简体接一行繁体，可以有多行
 var defaultDictName = "/dict.txt"
@@ -26,10 +27,17 @@ func init() {
 	}
 }
 
-// 在现在对照表的基础上追加自定的对照表，如果有相同的字，那么会在相应位置上覆盖掉原来的。
-func WithExtraDictFile(filepath string) error {
-	err := buildDict(filepath)
-	return err
+// 在现有对照表的基础上追加自定的对照表，如果有相同的字，那么会在相应位置上覆盖掉原来的。
+//
+// 考虑到它只是个简单的工具，不应该对现有系统有任何锁的影响，所以此处没有考虑加锁，因此，此函数应该放在项目初始化的地方。
+func WithExtraDictFile(filepath string) {
+	if filepath != "" {
+		once.Do(func() {
+			if err := buildDict(filepath); err != nil {
+				log.Println(err)
+			}
+		})
+	}
 }
 
 func withDefaultDictFile() error {
@@ -93,7 +101,6 @@ func TraditionalToSimplified(val string) string {
 }
 
 type dict struct {
-	rwmu    sync.RWMutex
 	datas2t map[rune]rune
 	datat2s map[rune]rune
 }

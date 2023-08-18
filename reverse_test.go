@@ -18,3 +18,9 @@ func TestWithExtraDictFile(t *testing.T) {
 	fmt.Println(SimplifiedToTraditional("中"))
 	fmt.Println(TraditionalToSimplified("种"))
 }
+
+func BenchmarkSToT(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		SimplifiedToTraditional("连续")
+	}
+}
