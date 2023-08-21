@@ -5,16 +5,11 @@ import (
 	"errors"
 	"log"
 	"os"
-	"path"
-	"runtime"
 	"sync"
 )
 
 var dt *dict
 var once sync.Once
-
-// 简体 <=> 繁体对照表，格式为一行简体接一行繁体，可以有多行
-var defaultDictName = "/dict.txt"
 
 func init() {
 	dt = &dict{
@@ -22,12 +17,13 @@ func init() {
 		datat2s: make(map[rune]rune),
 	}
 
-	if err := withDefaultDictFile(); err != nil {
+	if err := buildDict(""); err != nil {
 		log.Println(err)
 	}
 }
 
 // 在现有对照表的基础上追加自定的对照表，如果有相同的字，那么会在相应位置上覆盖掉原来的。
+// 格式为一行简体接一行繁体，可以有多行。
 //
 // 考虑到它只是个简单的工具，不应该对现有系统有任何锁的影响，所以此处没有考虑加锁，因此，此函数应该放在项目初始化的地方。
 func WithExtraDictFile(filepath string) {
@@ -40,35 +36,33 @@ func WithExtraDictFile(filepath string) {
 	}
 }
 
-func withDefaultDictFile() error {
-	_, filename, _, _ := runtime.Caller(1)
-	dictfile := path.Dir(filename) + defaultDictName
-
-	return buildDict(dictfile)
-}
-
 func buildDict(dictfile string) error {
-	file, err := os.Open(dictfile)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	buf := bufio.NewScanner(file)
-	var i int
 	var simplified []rune
 	var traditional []rune
-	for buf.Scan() {
-		text := buf.Text()
-		if text == "" {
-			continue
+	if dictfile != "" {
+		file, err := os.Open(dictfile)
+		if err != nil {
+			return err
 		}
-		switch i % 2 {
-		case 0:
-			simplified = []rune(text)
-		case 1:
-			traditional = []rune(text)
+		defer file.Close()
+		buf := bufio.NewScanner(file)
+		var i int
+		for buf.Scan() {
+			text := buf.Text()
+			if text == "" {
+				continue
+			}
+			switch i % 2 {
+			case 0:
+				simplified = []rune(text)
+			case 1:
+				traditional = []rune(text)
+			}
+			i++
 		}
-		i++
+	} else {
+		simplified = DefaultSimplified
+		traditional = DefaultTraditional
 	}
 
 	if len(simplified) != len(traditional) {
